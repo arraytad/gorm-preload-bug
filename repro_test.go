@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"testing"
 	"time"
-	"os"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -62,15 +60,15 @@ func (SlingShift) TableName() string {
 	return "sling_shifts"
 }
 
-func main() {
+func TestGormPreloadBug(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
+		t.Fatalf("failed to open database: %v", err)
 	}
 
 	err = db.AutoMigrate(&SlingUser{}, &SlingLocation{}, &SlingShift{})
 	if err != nil {
-		log.Fatalf("failed to migrate: %v", err)
+		t.Fatalf("failed to migrate: %v", err)
 	}
 
 	srcID := "test-src-123"
@@ -116,11 +114,17 @@ func main() {
 		},
 	}
 
-	db.Create(user)
-	db.Create(location)
-	db.Create(shift)
+	if err := db.Create(user).Error; err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+	if err := db.Create(location).Error; err != nil {
+		t.Fatalf("failed to create location: %v", err)
+	}
+	if err := db.Create(shift).Error; err != nil {
+		t.Fatalf("failed to create shift: %v", err)
+	}
 
-	fmt.Println("\n=== Loading shift with Preload ===")
+	t.Log("=== Loading shift with Preload ===")
 
 	// Now try to load the shift with Preload
 	var loadedShift SlingShift
@@ -128,23 +132,22 @@ func main() {
 		Where("id = ? AND src_id = ?", "shift-001", srcID).
 		First(&loadedShift).Error
 	if err != nil {
-		log.Fatalf("failed to load shift: %v", err)
+		t.Fatalf("failed to load shift: %v", err)
 	}
 
-	fmt.Printf("\nShift ID: %s\n", loadedShift.ID)
-	fmt.Printf("Shift UserID: %d\n", loadedShift.UserID)
-	fmt.Printf("Shift LocationID: %d\n", loadedShift.LocationID)
+	t.Logf("Shift ID: %s", loadedShift.ID)
+	t.Logf("Shift UserID: %d", loadedShift.UserID)
+	t.Logf("Shift LocationID: %d", loadedShift.LocationID)
 
 	if loadedShift.User == nil {
-		fmt.Println("ERROR: User is nil - Preload failed!")
-		os.Exit(1)
+		t.Error("ERROR: User is nil - Preload failed!")
+	} else {
+		t.Logf("User: %s %s (ID: %d)", loadedShift.User.User.FirstName, loadedShift.User.User.LastName, loadedShift.User.ID)
 	}
-
-	fmt.Printf("User: %s %s (ID: %d)\n", loadedShift.User.User.FirstName, loadedShift.User.User.LastName, loadedShift.User.ID)
 
 	if loadedShift.Location == nil {
-		fmt.Println("ERROR: Location is nil - Preload failed!")
-		os.Exit(1)
+		t.Error("ERROR: Location is nil - Preload failed!")
+	} else {
+		t.Logf("Location: %s (ID: %d)", loadedShift.Location.Location.Name, loadedShift.Location.ID)
 	}
-	fmt.Printf("Location: %s (ID: %d)\n", loadedShift.Location.Location.Name, loadedShift.Location.ID)
 }

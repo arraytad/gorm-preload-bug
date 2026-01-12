@@ -22,3 +22,5 @@ require (
 	modernc.org/memory v1.5.0 // indirect
 	modernc.org/sqlite v1.23.1 // indirect
 )
+
+replace gorm.io/gorm => github.com/kankankanp/gorm v0.0.0-20260112090902-af6c0e44ec22

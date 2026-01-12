@@ -1,5 +1,22 @@
-all:
+.PHONY: all test build lint tidy vet staticcheck
+
+.DEFAULT_GOAL := all
+
+all: tidy lint test build
+
+tidy:
 	go mod tidy
-	go vet
-	staticcheck
-	go build -o gorm-bug
+
+vet:
+	go vet ./...
+
+staticcheck:
+	staticcheck ./...
+
+lint: vet staticcheck
+
+test:
+	go test -v ./...
+
+build:
+	go build ./...
